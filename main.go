@@ -94,7 +94,12 @@ func performBulkLookup(numbers []string, lookedUpNames map[string]string) {
 
 func main() {
 
-	numbersFile, err := os.ReadFile("phone_nums.txt")
+	argLength := len(os.Args[1:])
+	if (argLength != 1) {
+		log.Fatalln("USAGE: ./main /path/to/list/of/phone/nums.txt")
+	}
+
+	numbersFile, err := os.ReadFile(os.Args[1])
 	if err != nil {
 		log.Fatalln(err)
 	}
