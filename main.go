@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 )
 
 //struct for storing API responses
@@ -18,8 +17,6 @@ type UpiResponse struct {
 	Name            string `json: "name, string"`
 	Message         string `json: "message, string"`
 }
-
-maxRequests := 10
 
 func makeAPIRequest(number string, suffix string) string {
 	//prepare request
@@ -53,9 +50,10 @@ func getNameIfExists(number string, suffix string) string {
 	err := json.Unmarshal([]byte(rawResp), &processedResp)
 	if err != nil {
 		log.Println("Error occurred!")
-		if (rawResp == "error code: 1015") {
+		if rawResp == "error code: 1015" {
 			log.Fatalln("Too many requests!")
 		}
+		log.Println(rawResp)
 		log.Fatalln(err)
 	}
 	if !processedResp.IsUpiRegistered {
@@ -64,62 +62,44 @@ func getNameIfExists(number string, suffix string) string {
 	return processedResp.Name
 }
 
-func sendToChannel(ch chan map[string]string, number string, suffix string, waitGrp *sync.WaitGroup) {
+func sendToChannel(number string, suffix string, mappings map[string]string) {
 	name := getNameIfExists(number, suffix)
-	if (name == "") {
-		return;
+	//name := "Dummy McDumbface" //dummy request response
+	if name == "" {
+		return
 	}
-	fmt.Println("phone: ", number, ", name: ", name)
-	var tempMap = make(map[string]string)
-	tempMap[number] = name
-	ch <- tempMap
-	defer waitGrp.Done()
+	mappings[number] = name
+	fmt.Println(number, ":", name)
 }
 
 func performBulkLookup(numbers []string, lookedUpNames map[string]string) {
 
-	ch := make(chan map[string]string, len(numbers))
-
-	maxRequests := 5
-
-	counter := 0
-	waitGrp := new(sync.WaitGroup)
-	waitGrp.Add(maxRequests)
+	maxRequests := 1
+	var semaphore = make(chan int, maxRequests)
+	var mapMutex = make(chan int, 1)
 
 	var suffices = []string{"paytm"}
 
 	for _, suffix := range suffices {
 		for _, number := range numbers {
-			if number == "" {
+			if len(number) != 10 || lookedUpNames[number] != "" {
 				continue
 			}
-			if counter > maxRequests {
-				waitGrp.Wait()
-				counter = 0
-			}
-			go sendToChannel(ch, number, suffix, waitGrp)
-			counter++
+			semaphore <- 1
+			mapMutex <- 1
+			go func() {
+				sendToChannel(number, suffix, lookedUpNames)
+				<-semaphore
+				<-mapMutex
+			}()
 		}
 	}
-	
-	if counter > 0 {
-		waitGrp.Wait()
-	}
-
-	for i:=0; i < len(numbers); i++ {
-		var tempMap = make(map[string]string)
-		tempMap = <-ch
-		for number, _ := range tempMap {
-			lookedUpNames[number] = tempMap[number]
-		}
-	}
-
 }
 
 func main() {
 
 	argLength := len(os.Args[1:])
-	if (argLength != 1) {
+	if argLength != 1 {
 		log.Fatalln("USAGE: ./main /path/to/list/of/phone/nums.txt")
 	}
 
@@ -132,7 +112,7 @@ func main() {
 	performBulkLookup(numbers, lookedUpNames)
 
 	for number, name := range lookedUpNames {
-		fmt.Println(number, ": ", name)
+		fmt.Println(number, ":", name)
 	}
 
 }
