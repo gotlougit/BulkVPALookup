@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 )
 
 //struct for storing API responses
@@ -17,6 +18,8 @@ type UpiResponse struct {
 	Name            string `json: "name, string"`
 	Message         string `json: "message, string"`
 }
+
+maxRequests := 10
 
 func makeAPIRequest(number string, suffix string) string {
 	//prepare request
@@ -61,25 +64,46 @@ func getNameIfExists(number string, suffix string) string {
 	return processedResp.Name
 }
 
-func sendToChannel(ch chan map[string]string, number string, suffix string) {
+func sendToChannel(ch chan map[string]string, number string, suffix string, waitGrp *sync.WaitGroup) {
 	name := getNameIfExists(number, suffix)
 	if (name == "") {
 		return;
 	}
+	fmt.Println("phone: ", number, ", name: ", name)
 	var tempMap = make(map[string]string)
 	tempMap[number] = name
 	ch <- tempMap
+	defer waitGrp.Done()
 }
 
 func performBulkLookup(numbers []string, lookedUpNames map[string]string) {
 
 	ch := make(chan map[string]string, len(numbers))
 
+	maxRequests := 5
+
+	counter := 0
+	waitGrp := new(sync.WaitGroup)
+	waitGrp.Add(maxRequests)
+
 	var suffices = []string{"paytm"}
+
 	for _, suffix := range suffices {
 		for _, number := range numbers {
-			go sendToChannel(ch, number, suffix)
+			if number == "" {
+				continue
+			}
+			if counter > maxRequests {
+				waitGrp.Wait()
+				counter = 0
+			}
+			go sendToChannel(ch, number, suffix, waitGrp)
+			counter++
 		}
+	}
+	
+	if counter > 0 {
+		waitGrp.Wait()
 	}
 
 	for i:=0; i < len(numbers); i++ {
