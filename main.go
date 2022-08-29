@@ -19,6 +19,10 @@ type UpiResponse struct {
 }
 
 func makeAPIRequest(number string, suffix string) string {
+
+	useragent := "BulkVPALookup/1.0"
+	baseurl := "https://upibankvalidator.com/api/upiValidation?upi="
+
 	//prepare request
 	vpa := number + "@" + suffix
 
@@ -27,12 +31,21 @@ func makeAPIRequest(number string, suffix string) string {
 	})
 	reqBody := bytes.NewBuffer(postBody)
 
+	client := &http.Client{}
+
 	//make request
-	resp, err := http.Post("https://upibankvalidator.com/api/upiValidation?upi="+vpa, "application/json", reqBody)
+	req, err := http.NewRequest("POST",baseurl+vpa, reqBody)
 	if err != nil {
 		log.Println("Error occurred!")
 		log.Fatalln(err)
+	}        
+	req.Header.Set("User-Agent", useragent)
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalln(err)
 	}
+	defer resp.Body.Close()
+
 	//process response
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -74,7 +87,7 @@ func sendToChannel(number string, suffix string, mappings map[string]string) {
 
 func performBulkLookup(numbers []string, lookedUpNames map[string]string) {
 
-	maxRequests := 1
+	maxRequests := 2
 	var semaphore = make(chan int, maxRequests)
 	var mapMutex = make(chan int, 1)
 
