@@ -87,8 +87,6 @@ func sendToChannel(number string, suffix string, mappings map[string]string) {
 
 func performBulkLookup(numbers []string, lookedUpNames map[string]string) {
 
-	maxRequests := 2
-	var semaphore = make(chan int, maxRequests)
 	var mapMutex = make(chan int, 1)
 
 	var suffices = []string{"paytm"}
@@ -98,11 +96,9 @@ func performBulkLookup(numbers []string, lookedUpNames map[string]string) {
 			if len(number) != 10 || lookedUpNames[number] != "" {
 				continue
 			}
-			semaphore <- 1
 			mapMutex <- 1
 			go func() {
 				sendToChannel(number, suffix, lookedUpNames)
-				<-semaphore
 				<-mapMutex
 			}()
 		}
