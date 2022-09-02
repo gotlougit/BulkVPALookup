@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 //struct for storing API responses
@@ -99,6 +100,7 @@ func performBulkLookup(numbers []string, lookedUpNames map[string]string) {
 			mapMutex <- 1
 			go func() {
 				sendToChannel(number, suffix, lookedUpNames)
+				time.Sleep(500 * time.Millisecond)
 				<-mapMutex
 			}()
 		}
