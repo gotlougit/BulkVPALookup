@@ -35,11 +35,11 @@ func makeAPIRequest(number string, suffix string) string {
 	client := &http.Client{}
 
 	//make request
-	req, err := http.NewRequest("POST",baseurl+vpa, reqBody)
+	req, err := http.NewRequest("POST", baseurl+vpa, reqBody)
 	if err != nil {
 		log.Println("Error occurred!")
 		log.Fatalln(err)
-	}        
+	}
 	req.Header.Set("User-Agent", useragent)
 	resp, err := client.Do(req)
 	if err != nil {
@@ -78,7 +78,7 @@ func getNameIfExists(number string, suffix string) string {
 
 func sendToChannel(number string, suffix string, mappings map[string]string) {
 	if mappings[number] != "" {
-		return;
+		return
 	}
 	name := getNameIfExists(number, suffix)
 	//name := "Dummy McDumbface" //dummy request response
@@ -91,7 +91,7 @@ func sendToChannel(number string, suffix string, mappings map[string]string) {
 
 func performBulkLookup(numbers []string, lookedUpNames map[string]string) {
 
-	var suffices = []string{"paytm","ybl"}
+	var suffices = []string{"paytm", "ybl"}
 
 	for _, suffix := range suffices {
 		for _, number := range numbers {
@@ -104,7 +104,7 @@ func performBulkLookup(numbers []string, lookedUpNames map[string]string) {
 	}
 }
 
-func getBulkLookupResults(filename string) map[string]string{
+func getBulkLookupResults(filename string) map[string]string {
 	rawcontent, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatalln(err)
@@ -115,7 +115,7 @@ func getBulkLookupResults(filename string) map[string]string{
 	for line := range lines {
 		pair := strings.Split(lines[line], ":")
 		if m[pair[0]] == "" {
-			if (len(pair) > 1) {
+			if len(pair) > 1 {
 				m[pair[0]] = pair[1]
 			}
 		}
@@ -130,21 +130,21 @@ func writeResultsToVCF(lookedUpNames map[string]string, filename string) {
 	}
 	defer file.Close()
 	for number, name := range lookedUpNames {
-		file.Write([]byte("BEGIN:VCARD\nVERSION:3.0\n"));
-		file.Write([]byte("FN:" + name + "\n"));
+		file.Write([]byte("BEGIN:VCARD\nVERSION:3.0\n"))
+		file.Write([]byte("FN:" + name + "\n"))
 		splitrep := strings.Split(name, " ")
 		newrep := ""
 		for word := range splitrep {
-			if (word == 0) {
+			if word == 0 {
 				newrep = splitrep[word]
 			} else {
 				newrep = splitrep[word] + ";" + newrep
 			}
 		}
 		newrep += ";;"
-		file.Write([]byte("N:" + newrep + "\n"));
-		file.Write([]byte("TEL;TYPE=cell:+91 " + number + "\n"));
-		file.Write([]byte("END:VCARD\n\n"));
+		file.Write([]byte("N:" + newrep + "\n"))
+		file.Write([]byte("TEL;TYPE=cell:+91 " + number + "\n"))
+		file.Write([]byte("END:VCARD\n\n"))
 	}
 
 }
@@ -155,7 +155,7 @@ func main() {
 	if argLength != 2 {
 		log.Fatalln("USAGE: ./main /path/to/list/of/phone/nums.txt /path/to/vcf/file.vcf")
 	}
-	
+
 	numbersFile, err := os.ReadFile(os.Args[1])
 	if err != nil {
 		log.Fatalln(err)
