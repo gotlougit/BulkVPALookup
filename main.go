@@ -77,6 +77,9 @@ func getNameIfExists(number string, suffix string) string {
 }
 
 func sendToChannel(number string, suffix string, mappings map[string]string) {
+	if mappings[number] != "" {
+		return;
+	}
 	name := getNameIfExists(number, suffix)
 	//name := "Dummy McDumbface" //dummy request response
 	if name == "" {
@@ -88,23 +91,36 @@ func sendToChannel(number string, suffix string, mappings map[string]string) {
 
 func performBulkLookup(numbers []string, lookedUpNames map[string]string) {
 
-	var mapMutex = make(chan int, 1)
-
-	var suffices = []string{"paytm"}
+	var suffices = []string{"paytm","ybl"}
 
 	for _, suffix := range suffices {
 		for _, number := range numbers {
 			if len(number) != 10 || lookedUpNames[number] != "" {
 				continue
 			}
-			mapMutex <- 1
-			go func() {
-				sendToChannel(number, suffix, lookedUpNames)
-				time.Sleep(500 * time.Millisecond)
-				<-mapMutex
-			}()
+			sendToChannel(number, suffix, lookedUpNames)
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
+}
+
+func getBulkLookupResults(filename string) map[string]string{
+	rawcontent, err := os.ReadFile(filename)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	m := make(map[string]string)
+	content := string(rawcontent)
+	lines := strings.Split(content, "\n")
+	for line := range lines {
+		pair := strings.Split(lines[line], ":")
+		if m[pair[0]] == "" {
+			if (len(pair) > 1) {
+				m[pair[0]] = pair[1]
+			}
+		}
+	}
+	return m
 }
 
 func main() {
@@ -113,7 +129,13 @@ func main() {
 	if argLength != 1 {
 		log.Fatalln("USAGE: ./main /path/to/list/of/phone/nums.txt")
 	}
-
+	tuple := make(map[string]string)
+	tuple = getBulkLookupResults(os.Args[1])
+	for number, name := range tuple {
+		fmt.Println(number, ":", name)
+	}
+	/*
+	
 	numbersFile, err := os.ReadFile(os.Args[1])
 	if err != nil {
 		log.Fatalln(err)
@@ -122,8 +144,10 @@ func main() {
 	var lookedUpNames = make(map[string]string)
 	performBulkLookup(numbers, lookedUpNames)
 
+
 	for number, name := range lookedUpNames {
 		fmt.Println(number, ":", name)
 	}
+	*/
 
 }
