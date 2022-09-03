@@ -19,6 +19,7 @@ type UpiResponse struct {
 	Message         string `json: "message, string"`
 }
 
+//perform the actual network request with a suitable user agent
 func makeAPIRequest(number string, suffix string) string {
 
 	useragent := "BulkVPALookup/1.0"
@@ -57,6 +58,7 @@ func makeAPIRequest(number string, suffix string) string {
 	return sb
 }
 
+//returns name if exists, empty string otherwise
 func getNameIfExists(number string, suffix string) string {
 	var processedResp UpiResponse
 	rawResp := makeAPIRequest(number, suffix)
@@ -76,12 +78,13 @@ func getNameIfExists(number string, suffix string) string {
 	return processedResp.Name
 }
 
+//bridge between network requests and going through all numbers given to us
 func sendToChannel(number string, suffix string, mappings map[string]string) {
 	if mappings[number] != "" {
 		return
 	}
 	name := getNameIfExists(number, suffix)
-	//name := "Dummy McDumbface" //dummy request response
+	//name := "Dummy McDumbface" //dummy request response for testing
 	if name == "" {
 		return
 	}
@@ -104,6 +107,7 @@ func performBulkLookup(numbers []string, lookedUpNames map[string]string) {
 	}
 }
 
+//somewhat redundant function created as a result of bad network conditions halting the program before it could create the VCF
 func getBulkLookupResults(filename string) map[string]string {
 	rawcontent, err := os.ReadFile(filename)
 	if err != nil {
@@ -123,6 +127,7 @@ func getBulkLookupResults(filename string) map[string]string {
 	return m
 }
 
+//help export our results to VCF for easy importing
 func writeResultsToVCF(lookedUpNames map[string]string, filename string) {
 	file, err := os.Create(filename)
 	if err != nil {
