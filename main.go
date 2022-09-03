@@ -123,18 +123,38 @@ func getBulkLookupResults(filename string) map[string]string{
 	return m
 }
 
+func writeResultsToVCF(lookedUpNames map[string]string, filename string) {
+	file, err := os.Create(filename)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer file.Close()
+	for number, name := range lookedUpNames {
+		file.Write([]byte("BEGIN:VCARD\nVERSION:3.0\n"));
+		file.Write([]byte("FN:" + name + "\n"));
+		splitrep := strings.Split(name, " ")
+		newrep := ""
+		for word := range splitrep {
+			if (word == 0) {
+				newrep = splitrep[word]
+			} else {
+				newrep = splitrep[word] + ";" + newrep
+			}
+		}
+		newrep += ";;"
+		file.Write([]byte("N:" + newrep + "\n"));
+		file.Write([]byte("TEL;TYPE=cell:+91 " + number + "\n"));
+		file.Write([]byte("END:VCARD\n\n"));
+	}
+
+}
+
 func main() {
 
 	argLength := len(os.Args[1:])
-	if argLength != 1 {
-		log.Fatalln("USAGE: ./main /path/to/list/of/phone/nums.txt")
+	if argLength != 2 {
+		log.Fatalln("USAGE: ./main /path/to/list/of/phone/nums.txt /path/to/vcf/file.vcf")
 	}
-	tuple := make(map[string]string)
-	tuple = getBulkLookupResults(os.Args[1])
-	for number, name := range tuple {
-		fmt.Println(number, ":", name)
-	}
-	/*
 	
 	numbersFile, err := os.ReadFile(os.Args[1])
 	if err != nil {
@@ -144,10 +164,6 @@ func main() {
 	var lookedUpNames = make(map[string]string)
 	performBulkLookup(numbers, lookedUpNames)
 
-
-	for number, name := range lookedUpNames {
-		fmt.Println(number, ":", name)
-	}
-	*/
+	writeResultsToVCF(lookedUpNames, os.Args[2])
 
 }
